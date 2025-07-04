@@ -1,31 +1,23 @@
-from flask import Flask, request, jsonify
-import joblib
+import streamlit as st
+import requests
 
-# Load model and vectorizer
-model = joblib.load("C:/Users/hp/OneDrive/Desktop/fake-news-checker/notebook/model.pkl")
-vectorizer = joblib.load("C:/Users/hp/OneDrive/Desktop/fake-news-checker/notebook/vectorizer.pkl")
+st.set_page_config(page_title="Fake News Detector", layout="centered")
 
-# Initialize Flask app
-app = Flask(__name__)
+st.title("📰 Fake News Detection")
+st.markdown("Enter a **news headline** below to check if it's real or fake.")
 
-@app.route('/')
-def home():
-    return "Fake News Detection API is running!"
+title_input = st.text_input("News Headline", "")
 
-@app.route('/predict', methods=['POST'])
-def predict():
-    data = request.get_json()
-    title = data.get("title")
-
-    if not title:
-        return jsonify({"error": "No title provided"}), 400
-
-    # Transform the title using the vectorizer
-    title_vec = vectorizer.transform([title])
-    prediction = model.predict(title_vec)[0]
-
-    result = "This news is real" if prediction == 1 else "This news is fake"
-    return jsonify({"prediction": result})
-
-if __name__ == '__main__':
-    app.run(debug=True)
+if st.button("Check"):
+    if title_input.strip() == "":
+        st.warning("Please enter a headline.")
+    else:
+        try:
+            res = requests.post("http://127.0.0.1:5000/predict", json={"title": title_input})
+            result = res.json().get("prediction", "Error in response")
+            if "real" in result.lower():
+                st.success("✅ " + result)
+            else:
+                st.error("🚫 " + result)
+        except Exception as e:
+            st.error("Failed to connect to backend. Make sure Flask is running.")
